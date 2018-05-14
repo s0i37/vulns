@@ -1,20 +1,37 @@
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
 void test_MemoryLeak(void)
 {
 	void * ptr = malloc(0x1000);
 }
 
+/* UWC - Use Without Check */
 void test_UWC(void)
 {
 	void * ptr = malloc(0x1000);
 	*((char *)ptr) = 'A';
+	if(ptr)
+		free(ptr);
 }
 
-int test_Non_init_var(void)
+/* UMR - Uninitialized Memory Read */
+int test_UMR_stack(void)
 {
 	int a;
+	return a;
+}
+
+/* UMR - Uninitialized Memory Read */
+int test_UMR_heap(void)
+{
+	int a;
+	void *ptr;
+	ptr = malloc(10);
+	if(!ptr)
+		return 0;
+	a = ((int *)ptr)[0];
+	free(ptr);
 	return a;
 }
 
@@ -27,6 +44,7 @@ void test_DoubleFree(void)
 	free(ptr);
 }
 
+/* dangling pointer */
 void test_UAF(void)
 {
 	void * ptr = malloc(0x1000);
@@ -36,9 +54,37 @@ void test_UAF(void)
 	( (char *)ptr )[5] = '\x00';
 }
 
-void test_BoF_heap(void)
+/* UAS/UAR - Use After Scope/Return */
+char * test_UAR(void)
 {
-	void * ptr = malloc(0x1000);
+	char buf[4];
+	return (char *)buf;
+}
+
+/* IOF - Integer overflow */
+int test_IoF()
+{
+	int a = 0x7fffffff;
+	return ++a;
+}
+
+/* OOB - Out Of Bounds read heap */
+void test_OOB_read_heap(void)
+{
+	void *ptr = malloc(0x1000);
+	unsigned int i;
+	char a;
+	if(! ptr)
+		return;
+	for( i = 0; i < 0x1004; i++ )
+		a = ( (char *) ptr )[i];
+	free(ptr);
+}
+
+/* OOB - Out Of Bounds write heap */
+void test_OOB_write_heap(void)
+{
+	void *ptr = malloc(0x1000);
 	unsigned int i;
 	if(! ptr)
 		return;
@@ -47,7 +93,8 @@ void test_BoF_heap(void)
 	free(ptr);
 }
 
-void test_OoB(void)
+/* OOB - Out Of Bounds read stack */
+void test_OOB_read_stack(void)
 {
 	void * ptr = malloc(0x100);
 	char a;
@@ -59,7 +106,8 @@ void test_OoB(void)
 	free(ptr);
 }
 
-void test_BoF_stack(void)
+/* OOB - Out Of Bounds write stack */
+void test_OOB_write_stack(void)
 {
 	char buf[0x10];
 	unsigned int i;
@@ -67,6 +115,7 @@ void test_BoF_stack(void)
 		( (char *) buf )[i] = '\x41';
 }
 
+/* HOF - Heap Overflow */
 void test_HoF(void)
 {
 	void * ptr;
@@ -77,8 +126,10 @@ void test_HoF(void)
 	while(ptr);
 }
 
+/* SOF - Stack Overflow */
 void test_SoF(void)
 {
+	char a[0x10000];
 	test_SoF();
 }
 
@@ -89,17 +140,28 @@ void test_Format_string(char * fmt)
 
 int main(int a, char ** b)
 {
-	test_Non_init_var();
-	test_MemoryLeak();
-	test_UWC();
-	test_UAF();
-	test_BoF_heap();
-	test_OoB();
-	test_Format_string("%s");
-
+	/* non crashable */
+	test_MemoryLeak();					// ASAN
+	test_UMR_stack();					// ASAN/MSAN
+	test_UMR_heap();					// MSAN
+	test_UWC();							// ?SAN
+	test_UAF();							// ASAN
+	test_UAR();							// ASAN
+	test_IoF();  						// UBSAN https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
+	test_OOB_read_heap();				// ASAN
+	test_OOB_write_heap();				// ASAN
+	test_OOB_read_stack();				// ASAN
+	/* TODO */							// TSAN  https://github.com/google/sanitizers/wiki/ThreadSanitizerDetectableBugs
+	
+	/* non crashable (win) - crashable (lin) */
 	test_DoubleFree();
-	test_BoF_stack();
+	return 0;
+	/* crashable */
+	test_OOB_write_stack();
 	test_HoF();
 	test_SoF();
+
+	/* special */
+	test_Format_string("%s");
 	return 0;
 }
