@@ -16,10 +16,10 @@ void test_UWC(void)
 }
 
 /* UMR - Uninitialized Memory Read */
-int test_UMR_stack(void)
+void test_UMR_stack(void)
 {
 	int a;
-	return a;
+	int b = a;
 }
 
 /* UMR - Uninitialized Memory Read */
@@ -55,10 +55,16 @@ void test_UAF(void)
 }
 
 /* UAS/UAR - Use After Scope/Return */
-char * test_UAR(void)
+char * __test_UAR(void)
 {
 	char buf[4];
+	buf[0] = 'a';
 	return (char *)buf;
+}
+void test_UAR(void)
+{
+	char a;
+	a = __test_UAR()[0];
 }
 
 /* IOF - Integer overflow */
@@ -153,9 +159,9 @@ int main(int a, char ** b)
 	test_OOB_read_stack();				// ASAN
 	/* TODO */							// TSAN  https://github.com/google/sanitizers/wiki/ThreadSanitizerDetectableBugs
 	
+	return 0;
 	/* non crashable (win) - crashable (lin) */
 	test_DoubleFree();
-	return 0;
 	/* crashable */
 	test_OOB_write_stack();
 	test_HoF();
