@@ -102,22 +102,21 @@ void test_OOB_write_heap(void)
 /* OOB - Out Of Bounds read stack */
 void test_OOB_read_stack(void)
 {
-	void * ptr = malloc(0x100);
+	char buf[0x100];
 	char a;
 	unsigned int i;
-	if(! ptr)
-		return;
+	for( i = 0; i < 0x100; i++ )		// init stack area
+		( (char *) buf )[i] = '\x00';
 	for( i = 0; i < 0x104; i++ )
-		a = ( (char *) ptr )[i];
-	free(ptr);
+		a = ( (char *) buf )[i];
 }
 
 /* OOB - Out Of Bounds write stack */
 void test_OOB_write_stack(void)
 {
-	char buf[0x10];
+	char buf[0x100];
 	unsigned int i;
-	for( i = 0; i < 0x20; i++ )
+	for( i = 0; i < 0x104; i++ )
 		( (char *) buf )[i] = '\x41';
 }
 
@@ -157,13 +156,14 @@ int main(int a, char ** b)
 	test_OOB_read_heap();				// ASAN
 	test_OOB_write_heap();				// ASAN
 	test_OOB_read_stack();				// ASAN
+	/* crashable */
+	test_OOB_write_stack();
 	/* TODO */							// TSAN  https://github.com/google/sanitizers/wiki/ThreadSanitizerDetectableBugs
 	
 	return 0;
 	/* non crashable (win) - crashable (lin) */
 	test_DoubleFree();
 	/* crashable */
-	test_OOB_write_stack();
 	test_HoF();
 	test_SoF();
 
