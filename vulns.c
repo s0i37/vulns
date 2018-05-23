@@ -82,6 +82,8 @@ void test_OOB_read_heap(void)
 	char a;
 	if(! ptr)
 		return;
+	for( i = 0; i < 0x1000; i++ )		// init heap area
+		( (char *) ptr )[i] = '\x00';
 	for( i = 0; i < 0x1004; i++ )
 		a = ( (char *) ptr )[i];
 	free(ptr);
