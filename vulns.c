@@ -1,5 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+
+
+int test_ACCESS_VIOLATION(void)
+{
+	return * (int *)0xAABBCCDD;
+}
 
 void test_MemoryLeak(void)
 {
@@ -136,7 +143,7 @@ void test_HoF(void)
 /* SOF - Stack Overflow */
 void test_SoF(void)
 {
-	char a[0x10000];
+	char a[0x1000];
 	test_SoF();
 }
 
@@ -145,8 +152,16 @@ void test_Format_string(char * fmt)
 	printf(fmt);
 }
 
+
+void __on_signal(int signal)
+{
+	printf("done\n");
+	exit(1);
+}
+
 int main(int a, char ** b)
 {
+	signal(SIGSEGV , __on_signal);
 	/* non crashable */
 	test_MemoryLeak();					// ASAN
 	test_UMR_stack();					// ASAN/MSAN
@@ -161,7 +176,7 @@ int main(int a, char ** b)
 	/* crashable */
 	test_OOB_write_stack();
 	/* TODO */							// TSAN  https://github.com/google/sanitizers/wiki/ThreadSanitizerDetectableBugs
-	
+	test_ACCESS_VIOLATION();
 	return 0;
 	/* non crashable (win) - crashable (lin) */
 	test_DoubleFree();
