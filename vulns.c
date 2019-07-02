@@ -78,6 +78,7 @@ void test_UAF(void)
 }
 
 /* UAS/UAR - Use After Scope/Return */
+/* warning: function returns address of local variable [-Wreturn-local-addr] */
 char * __test_UAR(void)
 {
 	char buf[4];
@@ -92,9 +93,9 @@ void test_UAR(void)
 }
 
 /* IOF - Integer overflow */
-int test_IoF()
+unsigned int test_IoF()
 {
-	signed int a = 0x7fffffff;
+	unsigned int a = 0xffffffff;
 	printf("try IoF\n");
 	return ++a;
 }
@@ -166,7 +167,7 @@ void test_HoF(void)
 	{
 		ptr = malloc(65535);
 		if(ptr)
-			* (int *)ptr = ptr;
+			*(int *)ptr = (int)ptr;
 	}
 	while(ptr);
 }
@@ -185,6 +186,11 @@ void test_Format_string(char * fmt)
 	printf(fmt);
 }
 
+void test_race_condition(void)
+{
+	/* TODO */
+}
+
 #if defined __linux__
 void __on_signal(int signal)
 {
@@ -200,31 +206,30 @@ int main(int a, char ** b)
 #elif defined(__linux__)
 	signal(SIGSEGV , __on_signal);
 #endif
-/*======non crashable======*/
-/*1*/	test_MemoryLeak();					// ASAN
-/*2*/	test_UMR_stack();					// ASAN/MSAN
-/*3*/	test_UMR_heap();					// MSAN
-/*4*/	test_UWC();							// ?SAN
-/*5*/	test_UAF();							// ASAN
-/*6*/	test_UAR();							// ASAN
-/*7*/	test_IoF();  						// UBSAN https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
-/*8*/	test_OOB_read_heap();				// ASAN
-		test_OOB_write_heap();				// ASAN
-		test_OOB_read_stack();				// ASAN
-
+/*======non crashable======*/ 				/* blackbox(win)	blackbox(linux)		opensource
+/*1*/	test_MemoryLeak();					/* procexp 			htop				ASAN */
+/*2*/	test_UMR_stack();					/* -- 				--					ASAN/MSAN */
+/*3*/	test_UMR_heap();					/* --				--					MSAN */
+/*4*/	test_UWC();							/* --				libdislocator		?SAN */
+/*5*/	test_UAF();							/* gflags			libdislocator		ASAN */
+/*6*/	test_UAR();							/* --				--	 				ASAN */
+/*7*/	test_IoF();  						/* --				--					UBSAN https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html */
+/*8*/	test_OOB_read_heap();				/* gflags			libdislocator		ASAN */
+/*9*/	test_OOB_write_heap();				/* gflags			libdislocator		ASAN */
+/*10*/	test_OOB_read_stack();				/* --				--					ASAN */
+		return 0;
 /*======crashable======*/
-		test_OOB_write_stack();
-/*9*/	test_ACCESS_VIOLATION();
-/*10*/	test_SoF();
-/*11*/	//test_HoF();
+/*11*/	test_OOB_write_stack(); 			/* crash 			crash 				crash */
+/*12*/	test_ACCESS_VIOLATION(); 			/* crash 			crash  				crash */
+/*13*/	test_SoF(); 						/* crash 			crash 				crash */
+/*14*/	test_HoF(); 						/* timeout			timeout				timeout */
 
-/*======crashable (lin) - non crashable (win)======*/
-/*12*/	test_DoubleFree();
+/*======crashable/non-crashable======*/
+/*15*/	test_DoubleFree(); 					/* --				crash 				?SAN */
 
 /*======special======*/
-/*13*/	test_Format_string("%s");
-	
-/* TODO */							// TSAN  https://github.com/google/sanitizers/wiki/ThreadSanitizerDetectableBugs
+/*16*/	test_Format_string("%s"); 			/* procmon 			ltrace 				?? */	
+/*17*/	test_race_condition();				/* --				--					TSAN  https://github.com/google/sanitizers/wiki/ThreadSanitizerDetectableBugs */
 
 #if defined(_WIN64) || defined(_WIN32)
 	} __except(1) { printf("[*] exception\n"); }
