@@ -2,16 +2,6 @@
 #include <stdlib.h>
 #include <signal.h>
 
-int was_tested_ACCESS_VIOLATION = 0;
-int test_ACCESS_VIOLATION(void)
-{
-	if(was_tested_ACCESS_VIOLATION)
-		return
-	was_tested_ACCESS_VIOLATION = 1;
-
-	printf("try ACCESS_VIOLATION\n");
-	return * (int *)0xAABBCCDD;
-}
 
 void test_MemoryLeak(void)
 {
@@ -31,7 +21,7 @@ void test_UWC(void)
 		free(ptr);
 }
 
-/* UMR - Uninitialized Memory Read */
+/* UMR - Uninitialized Memory Read (uninitialized access) */
 void test_UMR_stack(void)
 {
 	int a;
@@ -40,7 +30,7 @@ void test_UMR_stack(void)
 	b = a;
 }
 
-/* UMR - Uninitialized Memory Read */
+/* UMR - Uninitialized Memory Read (uninitialized access) */
 int test_UMR_heap(void)
 {
 	int a;
@@ -82,8 +72,10 @@ void test_UAF(void)
 char * __test_UAR(void)
 {
 	char buf[4];
+	char *ptr;
 	buf[0] = 'a';
-	return (char *)buf;
+	ptr = &buf;
+	return ptr;
 }
 void test_UAR(void)
 {
@@ -206,30 +198,30 @@ int main(int a, char ** b)
 #elif defined(__linux__)
 	signal(SIGSEGV , __on_signal);
 #endif
-/*======non crashable======*/ 				/* blackbox(win)	blackbox(linux)		opensource
-/*1*/	test_MemoryLeak();					/* procexp 			htop				ASAN */
-/*2*/	test_UMR_stack();					/* -- 				--					ASAN/MSAN */
-/*3*/	test_UMR_heap();					/* --				--					MSAN */
-/*4*/	test_UWC();							/* --				libdislocator		?SAN */
-/*5*/	test_UAF();							/* gflags			libdislocator		ASAN */
-/*6*/	test_UAR();							/* --				--	 				ASAN */
-/*7*/	test_IoF();  						/* --				--					UBSAN https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html */
-/*8*/	test_OOB_read_heap();				/* gflags			libdislocator		ASAN */
-/*9*/	test_OOB_write_heap();				/* gflags			libdislocator		ASAN */
-/*10*/	test_OOB_read_stack();				/* --				--					ASAN */
-		return 0;
-/*======crashable======*/
-/*11*/	test_OOB_write_stack(); 			/* crash 			crash 				crash */
-/*12*/	test_ACCESS_VIOLATION(); 			/* crash 			crash  				crash */
-/*13*/	test_SoF(); 						/* crash 			crash 				crash */
-/*14*/	test_HoF(); 						/* timeout			timeout				timeout */
+/*      					 				   Windows			Linux 				DrMemory	clang 	*/
+/*1*/	//test_OOB_write_heap();			/* gflags			libdislocator		+			ASAN 	*/	/*RCE*/
+/*2*/	//test_UAF();						/* gflags			libdislocator		+			ASAN 	*/	/*RCE*/
+/*3*/	//test_DoubleFree(); 				/* --				crash 				 					*/	/*RCE*/
+/*4*/	//test_OOB_write_stack(); 			/* crash 			crash 				 					*/	/*RCE*/
 
-/*======crashable/non-crashable======*/
-/*15*/	test_DoubleFree(); 					/* --				crash 				?SAN */
+/*5*/	//test_OOB_read_heap();				/* gflags			libdislocator		+			ASAN 	*/	/*info*/
+/*6*/	//test_OOB_read_stack();			/* -				-					-			ASAN 	*/	/*info*/
 
-/*======special======*/
-/*16*/	test_Format_string("%s"); 			/* procmon 			ltrace 				?? */	
-/*17*/	test_race_condition();				/* --				--					TSAN  https://github.com/google/sanitizers/wiki/ThreadSanitizerDetectableBugs */
+/*7*/	//test_IoF();  						/* -				-					-			- 		*/	/*undefined*/
+/*8*/	//test_UMR_stack();					/* - 				-					-			- 		*/	/*undefined*/
+/*9*/	//test_UMR_heap();					/* -				-					-			- 		*/	/*undefined*/
+/*10*/	//test_UAR();						/* -				-	 				-			- 		*/	/*undefined*/
+/*11*/	//test_race_condition();			/* -				-										*/	/*undefined*/
+
+/*12*/	//test_UWC();						/* -				libdislocator		-			- 		*/	/*DoS*/
+/*13*/	//test_MemoryLeak();				/* procexp 			htop				+			ASAN 	*/ 	/*DoS*/
+
+
+/*14*/	//test_SoF(); 						/* crash 			crash 				 					*/ 	/*DoS*/
+/*15*/	//test_HoF(); 						/* timeout			timeout				 					*/ 	/*DoS*/
+
+
+/*16*/	//test_Format_string("%s"); 		/* crash 			crash 				 					*/ 	/*RCE*/	
 
 #if defined(_WIN64) || defined(_WIN32)
 	} __except(1) { printf("[*] exception\n"); }
