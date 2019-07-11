@@ -31,7 +31,7 @@ void test_UMR_stack(void)
 }
 
 /* UMR - Uninitialized Memory Read (uninitialized access) */
-int test_UMR_heap(void)
+void test_UMR_heap(void)
 {
 	int a;
 	void *ptr;
@@ -41,7 +41,6 @@ int test_UMR_heap(void)
 		return 0;
 	a = ((int *)ptr)[0];
 	free(ptr);
-	return a;
 }
 
 void test_DoubleFree(void)
@@ -130,13 +129,13 @@ void test_OOB_write_heap(void)
 /* OOB - Out Of Bounds read stack */
 void test_OOB_read_stack(void)
 {
-	char buf[0x100];
-	char a;
-	unsigned int i;
+	char buf[0x100]; 		// rbp-0x110
+	char a; 				// rbp-0x5
+	unsigned int i; 		// rpb-0x4
 	printf("try OOB_read_stack\n");
 	for( i = 0; i < 0x100; i++ )		// init stack area
 		( (char *) buf )[i] = '\x00';
-	for( i = 0; i < 0x104; i++ )
+	for( i = 0; i < 0x120; i++ ) 		// behind stack frame
 		a = ( (char *) buf )[i];
 }
 
