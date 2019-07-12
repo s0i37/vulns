@@ -22,16 +22,20 @@ void test_UWC(void)
 }
 
 /* UMR - Uninitialized Memory Read (uninitialized access) */
-void test_UMR_stack(void)
+int test_UMR_stack(void)
 {
 	int a;
 	int b;
 	printf("try UMR_stack\n");
 	b = a;
+	if(b) /* need some action with uninitialized data */
+		return 1;
+	else
+		return 0;
 }
 
 /* UMR - Uninitialized Memory Read (uninitialized access) */
-void test_UMR_heap(void)
+int test_UMR_heap(void)
 {
 	int a;
 	void *ptr;
@@ -41,6 +45,10 @@ void test_UMR_heap(void)
 		return 0;
 	a = ((int *)ptr)[0];
 	free(ptr);
+	if(a) /* need some action with uninitialized data */
+		return 1;
+	else
+		return 0;
 }
 
 void test_DoubleFree(void)
@@ -76,19 +84,36 @@ char * __test_UAR(void)
 	ptr = &buf;
 	return ptr;
 }
-void test_UAR(void)
+void __test_UAR_rewrite(void)
+{
+	char buf[8];
+	for(unsigned int i = 0; i < 8; i++)
+		buf[i] = '\x00';
+}
+int test_UAR(void)
 {
 	char a;
+	char *ptr;
 	printf("try UAR\n");
-	a = __test_UAR()[0];
+	ptr = __test_UAR();
+	__test_UAR_rewrite();
+	a = ptr[0];
+	if(a)
+		return 1;
+	else
+		return 0;
 }
 
-/* IOF - Integer overflow */
-unsigned int test_IoF()
+/* IOF - Integer overflow (signed) */
+int test_IoF()
 {
-	unsigned int a = 0xffffffff;
+	signed int a = 0x7fffffff;
 	printf("try IoF\n");
-	return ++a;
+	a++;
+	if(a > 0)
+		return 1;
+	else
+		return 0;
 }
 
 /* OOB - Out Of Bounds read heap */
@@ -129,14 +154,18 @@ void test_OOB_write_heap(void)
 /* OOB - Out Of Bounds read stack */
 void test_OOB_read_stack(void)
 {
-	char buf[0x100]; 		// rbp-0x110
-	char a; 				// rbp-0x5
-	unsigned int i; 		// rpb-0x4
+	char in_buf[0x100];		// rbp-0x110
+	char out_buf[0x120]; 	// rbp-0x230
+	FILE *f; 				// rbp-0x10
+	unsigned int i; 		// rbp-0x4
 	printf("try OOB_read_stack\n");
 	for( i = 0; i < 0x100; i++ )		// init stack area
-		( (char *) buf )[i] = '\x00';
+		in_buf[i] = '\x00';
 	for( i = 0; i < 0x120; i++ ) 		// behind stack frame
-		a = ( (char *) buf )[i];
+		out_buf[i] = in_buf[i];
+	f = fopen("/tmp/OOB_read_stack_leak.txt","wb");
+	fwrite(out_buf, 0x120, 1, f);
+	fclose(f);
 }
 
 /* OOB - Out Of Bounds write stack */
@@ -203,13 +232,13 @@ int main(int a, char ** b)
 /*3*/	//test_DoubleFree(); 				/* --				crash 				 					*/	/*RCE*/
 /*4*/	//test_OOB_write_stack(); 			/* crash 			crash 				 					*/	/*RCE*/
 
-/*5*/	//test_OOB_read_heap();				/* gflags			libdislocator		+			ASAN 	*/	/*info*/
-/*6*/	//test_OOB_read_stack();			/* -				-					-			ASAN 	*/	/*info*/
+/*5*/	//test_OOB_read_heap();				/* gflags			libdislocator		+			ASAN 	*/	/*mem leak*/
+/*6*/	//test_OOB_read_stack();			/* -				-					+			ASAN 	*/	/*mem leak*/
 
-/*7*/	//test_IoF();  						/* -				-					-			- 		*/	/*undefined*/
-/*8*/	//test_UMR_stack();					/* - 				-					-			- 		*/	/*undefined*/
-/*9*/	//test_UMR_heap();					/* -				-					-			- 		*/	/*undefined*/
-/*10*/	//test_UAR();						/* -				-	 				-			- 		*/	/*undefined*/
+/*7*/	//return test_IoF();				/* -				-					-			UBSAN	*/	/*undefined*/
+/*8*/	//test_UMR_stack();					/* - 				-					+			MSAN	*/	/*undefined*/
+/*9*/	//test_UMR_heap();					/* -				-					+			MSAN	*/	/*undefined*/
+/*10*/	//return test_UAR();				/* -				-	 				-			- 		*/	/*undefined*/
 /*11*/	//test_race_condition();			/* -				-										*/	/*undefined*/
 
 /*12*/	//test_UWC();						/* -				libdislocator		-			- 		*/	/*DoS*/
