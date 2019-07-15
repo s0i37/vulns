@@ -238,7 +238,7 @@ int main(int a, char ** b)
 /*7*/	//return test_IoF();				/* -				-					-			UBSAN	*/	/*undefined*/
 /*8*/	//test_UMR_stack();					/* - 				-					+			MSAN	*/	/*undefined*/
 /*9*/	//test_UMR_heap();					/* -				-					+			MSAN	*/	/*undefined*/
-/*10*/	//return test_UAR();				/* -				-	 				-			- 		*/	/*undefined*/
+/*10*/	//return test_UAR();				/* -				-	 				+(x32)		- 		*/	/*undefined*/
 /*11*/	//test_race_condition();			/* -				-										*/	/*undefined*/
 
 /*12*/	//test_UWC();						/* -				libdislocator		-			- 		*/	/*DoS*/
