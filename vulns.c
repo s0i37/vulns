@@ -1,3 +1,5 @@
+// This is an open source non-commercial project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -226,30 +228,30 @@ int main(int a, char ** b)
 #elif defined(__linux__)
 	signal(SIGSEGV , __on_signal);
 #endif
-/*      					 				   Windows			Linux 				DrMemory	clang 	*/
-/*1*/	//test_OOB_write_heap();			/* gflags			libdislocator		+			ASAN 	*/	/*RCE*/
-/*2*/	//test_UAF();						/* gflags			libdislocator		+			ASAN 	*/	/*RCE*/
-/*3*/	//test_DoubleFree(); 				/* --				crash 				 					*/	/*RCE*/
-/*4*/	//test_OOB_write_stack(); 			/* crash 			crash 				 					*/	/*RCE*/
+/*      					 			   Windows			Linux 				DrMemory	clang	PVS 	*/
+/*1*/	test_OOB_write_heap();			/* gflags			libdislocator		+			ASAN	V557 	*/	/*RCE*/
+/*2*/	test_UAF();						/* gflags			libdislocator		+			ASAN 	V774	*/	/*RCE*/
+/*3*/	test_DoubleFree(); 				/* --				crash 				 					V586	*/	/*RCE*/
+/*4*/	test_OOB_write_stack(); 		/* crash 			crash 				 					V557	*/	/*RCE*/
 
-/*5*/	//test_OOB_read_heap();				/* gflags			libdislocator		+			ASAN 	*/	/*mem leak*/
-/*6*/	//test_OOB_read_stack();			/* -				-					+			ASAN 	*/	/*mem leak*/
+/*5*/	test_OOB_read_heap();			/* gflags			libdislocator		+			ASAN 	V557	*/	/*mem leak*/
+/*6*/	test_OOB_read_stack();			/* -				-					+			ASAN 	V557	*/	/*mem leak*/
 
-/*7*/	//return test_IoF();				/* -				-					-			UBSAN	*/	/*undefined*/
-/*8*/	//test_UMR_stack();					/* - 				-					+			MSAN	*/	/*undefined*/
-/*9*/	//test_UMR_heap();					/* -				-					+			MSAN	*/	/*undefined*/
-/*10*/	//return test_UAR();				/* -				-	 				+(x32)		- 		*/	/*undefined*/
-/*11*/	//test_race_condition();			/* -				-										*/	/*undefined*/
+/*7*/	return test_IoF();				/* -				-					-			UBSAN	-		*/	/*undefined*/
+/*8*/	test_UMR_stack();				/* - 				-					+			MSAN	V614	*/	/*undefined*/
+/*9*/	test_UMR_heap();				/* -				-					+			MSAN	-		*/	/*undefined*/
+/*10*/	return test_UAR();				/* -				-	 				+(x32)		- 		V558	*/	/*undefined*/
+/*11*/	test_race_condition();			/* -				-										-		*/	/*undefined*/
 
-/*12*/	//test_UWC();						/* -				libdislocator		-			- 		*/	/*DoS*/
-/*13*/	//test_MemoryLeak();				/* procexp 			htop				+			ASAN 	*/ 	/*DoS*/
-
-
-/*14*/	//test_SoF(); 						/* crash 			crash 				 					*/ 	/*DoS*/
-/*15*/	//test_HoF(); 						/* timeout			timeout				 					*/ 	/*DoS*/
+/*12*/	test_UWC();						/* -				libdislocator		-			- 		V522	*/	/*DoS*/
+/*13*/	test_MemoryLeak();				/* procexp 			htop				+			ASAN 	V773	*/ 	/*DoS*/
 
 
-/*16*/	//test_Format_string("%s"); 		/* crash 			crash 				 					*/ 	/*RCE*/	
+/*14*/	test_SoF(); 					/* crash 			crash 				 					-		*/ 	/*DoS*/
+/*15*/	test_HoF(); 					/* timeout			timeout				 					-		*/ 	/*DoS*/
+
+
+/*16*/	test_Format_string("%s"); 		/* crash 			crash 				 					V618	*/ 	/*RCE*/	
 
 #if defined(_WIN64) || defined(_WIN32)
 	} __except(1) { printf("[*] exception\n"); }
