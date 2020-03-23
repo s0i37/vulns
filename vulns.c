@@ -5,7 +5,7 @@
 #include <signal.h>
 
 
-void test_MemoryLeak(void)
+void test_DangingPointer(void)
 {
 	void * ptr;
 	printf("try MemoryLeak\n");
@@ -36,7 +36,7 @@ int test_UMR_stack(void)
 		return 0;
 }
 
-/* UMR - Uninitialized Memory Read (uninitialized access) */
+/* UMR - Uninitialized Memory Read (uninitialized access, Wilf pointer) */
 int test_UMR_heap(void)
 {
 	int a;
@@ -118,7 +118,7 @@ int test_IoF()
 		return 0;
 }
 
-/* OOB - Out Of Bounds read heap */
+/* OOB - Out Of Bounds read heap (Buffer over-read) */
 int was_tested_OOB_read_heap = 0;
 void test_OOB_read_heap()
 {
@@ -139,7 +139,7 @@ void test_OOB_read_heap()
 	free(ptr);
 }
 
-/* OOB - Out Of Bounds write heap */
+/* OOB - Out Of Bounds write heap (Buffer overflow) */
 void test_OOB_write_heap(void)
 {
 	void *ptr;
@@ -153,7 +153,7 @@ void test_OOB_write_heap(void)
 	free(ptr);
 }
 
-/* OOB - Out Of Bounds read stack */
+/* OOB - Out Of Bounds read stack (Buffer over-read) */
 void test_OOB_read_stack(void)
 {
 	char in_buf[0x100];		// rbp-0x110
@@ -170,7 +170,7 @@ void test_OOB_read_stack(void)
 	fclose(f);
 }
 
-/* OOB - Out Of Bounds write stack */
+/* OOB - Out Of Bounds write stack (Buffer overflow) */
 void test_OOB_write_stack(void)
 {
 	char buf[0x100];
@@ -180,8 +180,8 @@ void test_OOB_write_stack(void)
 		( (char *) buf )[i] = '\x41';
 }
 
-/* HOF - Heap Overflow */
-void test_HoF(void)
+/* HE - Heap Exhaustion */
+void test_HE(void)
 {
 	void * ptr;
 	printf("try HoF\n");
@@ -194,12 +194,12 @@ void test_HoF(void)
 	while(ptr);
 }
 
-/* SOF - Stack Overflow */
-void test_SoF(void)
+/* SE - Stack Exhaustion */
+void test_SE(void)
 {
 	char buf[0x1000];
 	printf("try SoF\n");
-	test_SoF();
+	test_SE();
 }
 
 void test_Format_string(char * fmt)
@@ -212,6 +212,9 @@ void test_race_condition(void)
 {
 	/* TODO */
 }
+
+void test_mismatch_free(void);
+void invalid_free(void);
 
 #if defined __linux__
 void __on_signal(int signal)
@@ -231,6 +234,7 @@ int main(int a, char ** b)
 /*      					 			   Windows			Linux 				DrMemory	clang	PVS 	*/
 /*1*/	test_OOB_write_heap();			/* gflags			libdislocator		+			ASAN	V557 	*/	/*RCE*/
 /*2*/	test_UAF();						/* gflags			libdislocator		+			ASAN 	V774	*/	/*RCE*/
+return;
 /*3*/	test_DoubleFree(); 				/* --				crash 				 					V586	*/	/*RCE*/
 /*4*/	test_OOB_write_stack(); 		/* crash 			crash 				 					V557	*/	/*RCE*/
 
@@ -244,14 +248,14 @@ int main(int a, char ** b)
 /*11*/	test_race_condition();			/* -				-										-		*/	/*undefined*/
 
 /*12*/	test_UWC();						/* -				libdislocator		-			- 		V522	*/	/*DoS*/
-/*13*/	test_MemoryLeak();				/* procexp 			htop				+			ASAN 	V773	*/ 	/*DoS*/
+/*13*/	test_DangingPointer();			/* procexp 			htop				+			ASAN 	V773	*/ 	/*DoS*/
 
 
-/*14*/	test_SoF(); 					/* crash 			crash 				 					-		*/ 	/*DoS*/
-/*15*/	test_HoF(); 					/* timeout			timeout				 					-		*/ 	/*DoS*/
+/*14*/	test_SE(); 						/* crash 			crash 				 					-		*/ 	/*DoS*/
+/*15*/	test_HE(); 						/* timeout			timeout				 					-		*/ 	/*DoS*/
 
 
-/*16*/	test_Format_string("%s"); 		/* crash 			crash 				 					V618	*/ 	/*RCE*/	
+/*16*/	test_Format_string("%s"); 		/* crash 			crash 				 					V618	*/ 	/*RCE*/
 
 #if defined(_WIN64) || defined(_WIN32)
 	} __except(1) { printf("[*] exception\n"); }
